@@ -3,11 +3,13 @@ import wx
 import subprocess
 import time
 from hotkeys import HotkeysManager
+from wx import Bitmap, Image
 
 
 class AudioPlayer(wx.Frame):
     def __init__(self, *args, **kw):
         super(AudioPlayer, self).__init__(*args, **kw)
+        self.SetSize(wx.Size(600, 600))
 
         self.is_paused = False
         self.is_play = False
@@ -19,77 +21,67 @@ class AudioPlayer(wx.Frame):
         self.start_time = 0
         self.pause_time = 0
         self.folder_path = None  # Initialize folder_path
-        self.update_button_states()  # Initialize the hotkeys manager and register hotkeys
+
         self.hotkeys_manager = HotkeysManager(self)
         self.hotkeys_manager.register_hotkeys()
         self.on_space_key()
         self.listbox.Bind(wx.EVT_KEY_DOWN, self.on_key_down)
+        self.update_button_states()  # Initialize the hotkeys manager and register hotkeys
 
     def init_ui(self):
         panel = wx.Panel(self)
 
-        def set_button_font_size(button, size):
-            font = button.GetFont()
-            font.SetPointSize(size)
-            button.SetFont(font)
-
         vbox = wx.BoxSizer(wx.VERTICAL)
 
         self.listbox = wx.ListBox(panel)
+        self.listbox.SetMaxSize((-1, 470))
         vbox.Add(self.listbox, proportion=1, flag=wx.EXPAND | wx.ALL, border=10)
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
 
         self.play_button = wx.Button(panel, label='Воспроизведение')
+        self.play_button = wx.BitmapButton(panel, bitmap=wx.Bitmap('icons/play.png'))
+        self.play_button.SetPosition((5, 500))
+        self.Bind(wx.EVT_BUTTON, self.on_play, self.play_button)
+        self.play_button.Hide()
+
+
         self.pause_button = wx.Button(panel, label='Пауза')
+        self.pause_button = wx.BitmapButton(panel, bitmap=wx.Bitmap('icons/pause.png'))
         self.resume_button = wx.Button(panel, label='Продолжить')
+        self.resume_button = wx.BitmapButton(panel, bitmap=wx.Bitmap('icons/play.png'))
         self.stop_button = wx.Button(panel, label='Стоп')
+        self.stop_button = wx.BitmapButton(panel, bitmap=wx.Bitmap('icons/stop.png'))
         self.browse_button = wx.Button(panel, label='Обзор')
         self.rewind_button = wx.Button(panel, label='Назад')
         self.forward_button = wx.Button(panel, label='Вперед')
         self.slow_down_button = wx.Button(panel, label='Замедлить')
         self.speed_up_button = wx.Button(panel, label='Ускорить')
 
-        self.play_button.SetSize((30, 20))
-        self.pause_button.SetSize((30, 20))
-        self.resume_button.SetSize((30, 20))
-        self.stop_button.SetSize((30, 20))
-        self.browse_button.SetSize((30, 20))
-        self.rewind_button.SetSize((30, 20))
-        self.forward_button.SetSize((30, 20))
-        self.slow_down_button.SetSize((30, 20))
-        self.speed_up_button.SetSize((30, 20))
 
-        # Устанавливаем выравнивание текста по левому краю для кнопок
-        self.play_button.SetWindowStyle(wx.ALIGN_LEFT)
-        self.pause_button.SetWindowStyle(wx.ALIGN_LEFT)
-        self.resume_button.SetWindowStyle(wx.ALIGN_LEFT)
-        self.stop_button.SetWindowStyle(wx.ALIGN_LEFT)
-        self.browse_button.SetWindowStyle(wx.ALIGN_LEFT)
-        self.speed_up_button.SetWindowStyle(wx.ALIGN_LEFT)
-        self.slow_down_button.SetWindowStyle(wx.ALIGN_LEFT)
-        self.rewind_button.SetWindowStyle(wx.ALIGN_LEFT)
-        self.forward_button.SetWindowStyle(wx.ALIGN_LEFT)
+        self.pause_button.SetPosition((5, 500))
+        self.resume_button.SetPosition((5, 500))
+        self.stop_button.SetPosition((40, 500))
+        self.browse_button.SetPosition((75, 500))
+        self.rewind_button.SetPosition((110, 500))
+        self.forward_button.SetPosition((145, 500))
+        self.slow_down_button.SetPosition((180, 500))
+        self.speed_up_button.SetPosition((215, 500))
 
-        self.play_button.SetPosition((5, 180))
-        self.pause_button.SetPosition((-35, 180))
-        self.resume_button.SetPosition((-35, 180))
-        self.stop_button.SetPosition((40, 180))
-        self.browse_button.SetPosition((75, 180))
-        self.rewind_button.SetPosition((110, 180))
-        self.forward_button.SetPosition((145, 180))
-        self.slow_down_button.SetPosition((180, 180))
-        self.speed_up_button.SetPosition((215, 180))
-        set_button_font_size(self.play_button, 8)
-
-        hbox.Add(self.rewind_button, flag=wx.RIGHT, border=10)
-        hbox.Add(self.forward_button)
+        self.resume_button.Hide()
+        self.pause_button.Hide()
+        self.stop_button.Hide()
+        self.browse_button.Show()
+        self.rewind_button.Hide()
+        self.forward_button.Hide()
+        self.slow_down_button.Hide()
+        self.speed_up_button.Hide()
 
         vbox.Add(hbox, flag=wx.ALIGN_CENTER | wx.TOP | wx.BOTTOM, border=10)
 
         panel.SetSizer(vbox)
 
-        self.Bind(wx.EVT_BUTTON, self.on_play, self.play_button)
+
         self.Bind(wx.EVT_BUTTON, self.on_pause, self.pause_button)
         self.Bind(wx.EVT_BUTTON, self.on_resume, self.resume_button)
         self.Bind(wx.EVT_BUTTON, self.on_stop, self.stop_button)
@@ -100,7 +92,7 @@ class AudioPlayer(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_forward, self.forward_button)
         self.listbox.Bind(wx.EVT_LISTBOX, self.OnListboxUpdate)
 
-        self.SetTitle('Аудиоплеер')
+        self.SetTitle('TihonPlayer v2')
         self.Centre()
 
     def on_play(self, event):
@@ -201,31 +193,24 @@ class AudioPlayer(wx.Frame):
 
     def update_button_states(self):
         is_listbox_empty = self.listbox.GetCount() == 0
-        if not self.is_play and not self.is_paused:
-            self.pause_button.Enable(False)
-            self.pause_button.SetPosition((-35, 180))
-            self.resume_button.Enable(False)
-            self.resume_button.SetPosition((-35, 180))
-            self.play_button.Enable(not is_listbox_empty)
-            self.play_button.SetPosition((5, 180))
-        elif self.is_play and not self.is_paused:
-            self.play_button.Enable(False)
-            self.play_button.SetPosition((-35, 180))
-            self.resume_button.Enable(False)
-            self.resume_button.SetPosition((-35, 180))
-            self.pause_button.Enable(True)
-            self.pause_button.SetPosition((5, 180))
-        else:
-            self.pause_button.Enable(False)
-            self.pause_button.SetPosition((-35, 180))
-            self.resume_button.Enable(not is_listbox_empty)
-            self.resume_button.SetPosition((5, 180))
-        self.stop_button.Enable(not is_listbox_empty)
-        self.speed_up_button.Enable(not is_listbox_empty)
-        self.slow_down_button.Enable(not is_listbox_empty)
-        self.rewind_button.Enable(not is_listbox_empty)
-        self.forward_button.Enable(not is_listbox_empty)
-        # "Обзор" button remains always enabled
+        if not is_listbox_empty:
+            if not self.is_play and not self.is_paused:
+                self.pause_button.Hide()
+                self.resume_button.Hide()
+                self.play_button.Show()
+            elif self.is_play and not self.is_paused:
+                self.play_button.Hide()
+                self.resume_button.Hide()
+                self.pause_button.Show()
+            else:
+                self.pause_button.Hide()
+                self.play_button.Hide()
+                self.resume_button.Show()
+            self.stop_button.Show()
+            self.speed_up_button.Show()
+            self.slow_down_button.Show()
+            self.rewind_button.Show()
+            self.forward_button.Show()
 
     def on_space_key(self):
         """Handle the space key press."""
@@ -243,6 +228,7 @@ class AudioPlayer(wx.Frame):
             # Prevent default behavior for left and right keys
             return
         event.Skip()  # Allow other keys to be processed normally
+
 
     def on_close(self, event):
         if self.current_process:
