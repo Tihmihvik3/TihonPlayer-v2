@@ -37,63 +37,44 @@ class AudioPlayer(wx.Frame):
         self.listbox.SetMaxSize((-1, 470))
         vbox.Add(self.listbox, proportion=1, flag=wx.EXPAND | wx.ALL, border=10)
 
-        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        self.play_button = self.create_button(panel, 'Воспроизведение (Space)', 'icons/play.png', (5, 500), self.on_play)
+        self.pause_button = self.create_button(panel, 'Пауза(Space)', 'icons/pause.png', (5, 500), self.on_pause)
+        self.resume_button = self.create_button(panel, 'Продолжить (Space)', 'icons/resume.png', (5, 500), self.on_resume)
+        self.stop_button = self.create_button(panel, 'Стоп (Ctrl+Space)', 'icons/stop.png', (40, 500), self.on_stop)
+        self.browse_button = self.create_button(panel, 'Обзор (Ctrl+B)', 'icons/browse.png', (75, 500), self.on_browse)
+        self.browse_button.Show()
+        self.rewind_button = self.create_button(panel, 'Перемотать назад (Left)', 'icons/seek_backward.png', (110, 500), self.on_rewind)
+        self.forward_button = self.create_button(panel, 'Перемотать вперёд (Right)', 'icons/seek_forward.png', (145, 500), self.on_forward)
 
-        self.play_button = wx.Button(panel, label='Воспроизведение')
-        self.play_button = wx.BitmapButton(panel, bitmap=wx.Bitmap('icons/play.png'))
-        self.play_button.SetPosition((5, 500))
-        self.Bind(wx.EVT_BUTTON, self.on_play, self.play_button)
-        self.play_button.Hide()
-
-
-        self.pause_button = wx.Button(panel, label='Пауза')
-        self.pause_button = wx.BitmapButton(panel, bitmap=wx.Bitmap('icons/pause.png'))
-        self.resume_button = wx.Button(panel, label='Продолжить')
-        self.resume_button = wx.BitmapButton(panel, bitmap=wx.Bitmap('icons/play.png'))
-        self.stop_button = wx.Button(panel, label='Стоп')
-        self.stop_button = wx.BitmapButton(panel, bitmap=wx.Bitmap('icons/stop.png'))
-        self.browse_button = wx.Button(panel, label='Обзор')
-        self.rewind_button = wx.Button(panel, label='Назад')
-        self.forward_button = wx.Button(panel, label='Вперед')
         self.slow_down_button = wx.Button(panel, label='Замедлить')
         self.speed_up_button = wx.Button(panel, label='Ускорить')
 
 
-        self.pause_button.SetPosition((5, 500))
-        self.resume_button.SetPosition((5, 500))
-        self.stop_button.SetPosition((40, 500))
-        self.browse_button.SetPosition((75, 500))
-        self.rewind_button.SetPosition((110, 500))
-        self.forward_button.SetPosition((145, 500))
         self.slow_down_button.SetPosition((180, 500))
         self.speed_up_button.SetPosition((215, 500))
 
-        self.resume_button.Hide()
-        self.pause_button.Hide()
-        self.stop_button.Hide()
-        self.browse_button.Show()
-        self.rewind_button.Hide()
-        self.forward_button.Hide()
+
         self.slow_down_button.Hide()
         self.speed_up_button.Hide()
-
-        vbox.Add(hbox, flag=wx.ALIGN_CENTER | wx.TOP | wx.BOTTOM, border=10)
 
         panel.SetSizer(vbox)
 
 
-        self.Bind(wx.EVT_BUTTON, self.on_pause, self.pause_button)
-        self.Bind(wx.EVT_BUTTON, self.on_resume, self.resume_button)
-        self.Bind(wx.EVT_BUTTON, self.on_stop, self.stop_button)
-        self.Bind(wx.EVT_BUTTON, self.on_browse, self.browse_button)
         self.Bind(wx.EVT_BUTTON, self.on_speed_up, self.speed_up_button)
         self.Bind(wx.EVT_BUTTON, self.on_slow_down, self.slow_down_button)
-        self.Bind(wx.EVT_BUTTON, self.on_rewind, self.rewind_button)
-        self.Bind(wx.EVT_BUTTON, self.on_forward, self.forward_button)
+
         self.listbox.Bind(wx.EVT_LISTBOX, self.OnListboxUpdate)
 
         self.SetTitle('TihonPlayer v2')
         self.Centre()
+
+    def create_button(self, panel, label, bitmap_path, position, event_handler):
+        button = wx.Button(panel, label=label)
+        button = wx.BitmapButton(panel, bitmap=wx.Bitmap(bitmap_path))
+        button.SetPosition(position)
+        self.Bind(wx.EVT_BUTTON, event_handler, button)
+        button.Hide()
+        return button
 
     def on_play(self, event):
         # Остановить текущее воспроизведение, если оно запущено
