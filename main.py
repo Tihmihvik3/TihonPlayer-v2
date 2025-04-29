@@ -45,6 +45,8 @@ class AudioPlayer(wx.Frame):
         self.browse_button.Show()
         self.rewind_button = self.create_button(panel, 'Перемотать назад (Left)', 'icons/seek_backward.png', (110, 500), self.on_rewind)
         self.forward_button = self.create_button(panel, 'Перемотать вперёд (Right)', 'icons/seek_forward.png', (145, 500), self.on_forward)
+        self.prev_track_button = self.create_button(panel, 'Предыдущий трек (Page Up)', 'icons/prev_track.png', (180, 500), self.on_prev_track)
+        self.next_track_button = self.create_button(panel, 'Следующий трек (Page Down)', 'icons/next_track.png', (215, 500), self.on_next_track)
 
         self.slow_down_button = wx.Button(panel, label='Замедлить')
         self.speed_up_button = wx.Button(panel, label='Ускорить')
@@ -169,6 +171,20 @@ class AudioPlayer(wx.Frame):
     def on_forward(self, event, sec=2):
         self.on_rewind(None, sec)
 
+    def on_prev_track(self):
+        """Переход к предыдущему треку."""
+        selection = self.listbox.GetSelection()
+        if selection != wx.NOT_FOUND and selection > 0:
+            self.listbox.SetSelection(selection - 1)
+            self.on_play(None)
+
+    def on_next_track(self):
+        """Переход к следующему треку."""
+        selection = self.listbox.GetSelection()
+        if selection != wx.NOT_FOUND and selection < self.listbox.GetCount() - 1:
+            self.listbox.SetSelection(selection + 1)
+            self.on_play(None)
+
     def OnListboxUpdate(self, event):
         self.update_button_states()
 
@@ -192,6 +208,8 @@ class AudioPlayer(wx.Frame):
             self.slow_down_button.Show()
             self.rewind_button.Show()
             self.forward_button.Show()
+            self.prev_track_button.Show()
+            self.next_track_button.Show()
 
     def on_space_key(self):
         """Handle the space key press."""
@@ -205,8 +223,7 @@ class AudioPlayer(wx.Frame):
     def on_key_down(self, event):
         """Handle key down events to prevent listbox navigation."""
         key_code = event.GetKeyCode()
-        if key_code in [wx.WXK_LEFT, wx.WXK_RIGHT]:
-            # Prevent default behavior for left and right keys
+        if key_code in [wx.WXK_LEFT, wx.WXK_RIGHT, wx.WXK_PAGEUP, wx.WXK_PAGEDOWN]:
             return
         event.Skip()  # Allow other keys to be processed normally
 
