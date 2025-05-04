@@ -21,6 +21,7 @@ class AudioPlayer(wx.Frame):
         self.start_time = 0
         self.pause_time = 0
         self.folder_path = None  # Initialize folder_path
+        self.volume_normal =70
 
         self.hotkeys_manager = HotkeysManager(self)
         self.hotkeys_manager.register_hotkeys()
@@ -87,7 +88,12 @@ class AudioPlayer(wx.Frame):
         if selection != wx.NOT_FOUND:
             file_name = self.listbox.GetString(selection)
             self.current_file = os.path.join(self.folder_path, file_name)
-            command = ['ffplay', '-nodisp', '-autoexit', '-af', f'atempo={self.playback_speed}', self.current_file]
+            command = [
+                'ffplay', '-nodisp', '-autoexit',
+                '-af', f'atempo={self.playback_speed}',
+                '-volume', str(self.volume_normal),  # Устанавливаем громкость
+                self.current_file
+            ]
             self.current_process = subprocess.Popen(command, stdin=subprocess.PIPE)
             self.is_paused = False
             self.is_play = True
@@ -108,7 +114,8 @@ class AudioPlayer(wx.Frame):
             elapsed_time = time.time() - self.start_time
             command = [
                 'ffplay', '-nodisp', '-autoexit', '-af', f'atempo={self.playback_speed}',
-                '-ss', str(elapsed_time), self.current_file
+                '-ss', str(elapsed_time), '-volume', str(self.volume_normal),  # Set volume level
+                self.current_file
             ]
             self.current_process = subprocess.Popen(command, stdin=subprocess.PIPE)
             self.is_play = True
@@ -185,6 +192,18 @@ class AudioPlayer(wx.Frame):
             self.listbox.SetSelection(selection + 1)
             self.on_play(None)
 
+    def on_volume_up(self, event):
+        if self.current_process:
+            self.on_pause(None)  # Pause playback
+            self.volume_normal = min(self.volume_normal + 5, 100)  # Increase volume by 5, max 100
+            self.on_resume(None)  # Resume playback
+
+    def on_volume_down(self, event):
+        if self.current_process:
+            self.on_pause(None)  # Pause playback
+            self.volume_normal = max(self.volume_normal - 5, 0)  # Decrease volume by 5, minimum 0
+            self.on_resume(None)  # Resume playback
+
     def OnListboxUpdate(self, event):
         self.update_button_states()
 
@@ -225,6 +244,8 @@ class AudioPlayer(wx.Frame):
         key_code = event.GetKeyCode()
         if key_code in [wx.WXK_LEFT, wx.WXK_RIGHT, wx.WXK_PAGEUP, wx.WXK_PAGEDOWN]:
             return
+        if event.ControlDown() and key_code in [wx.WXK_UP, wx.WXK_DOWN]:
+            return  # Prevent Control+Up and Control+Down from affecting the listbox
         event.Skip()  # Allow other keys to be processed normally
 
 

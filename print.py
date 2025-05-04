@@ -26,7 +26,8 @@ button1.setFixedSize(30, 30)
 button2.setFixedSize(30, 30)
 
 # Растягиваем иконку на всю кнопку
-button1.setIconSize(button1.size())
+button1.setIconSiz
+e(button1.size())
 
 # Добавляем кнопки в компоновщик
 layout.addWidget(button1)
