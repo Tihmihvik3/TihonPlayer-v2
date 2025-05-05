@@ -48,6 +48,8 @@ class AudioPlayer(wx.Frame):
         self.forward_button = self.create_button(panel, 'Перемотать вперёд (Right)', 'icons/seek_forward.png', (145, 500), self.on_forward)
         self.prev_track_button = self.create_button(panel, 'Предыдущий трек (Page Up)', 'icons/prev_track.png', (180, 500), self.on_prev_track)
         self.next_track_button = self.create_button(panel, 'Следующий трек (Page Down)', 'icons/next_track.png', (215, 500), self.on_next_track)
+        self.volume_down_button = self.create_button(panel, 'Тише (Ctrl+Down)', 'icons/volume_down.png', (250, 500), self.on_volume_down)
+        self.volume_up_button = self.create_button(panel, 'Громче (Ctrl+Up)', 'icons/volume_up.png', (285, 500), self.on_volume_up)
 
         self.slow_down_button = wx.Button(panel, label='Замедлить')
         self.speed_up_button = wx.Button(panel, label='Ускорить')
@@ -111,10 +113,11 @@ class AudioPlayer(wx.Frame):
 
     def on_resume(self, event):
         if self.current_file and self.is_paused:
-            elapsed_time = time.time() - self.start_time
+            elapsed_time = self.pause_time - self.start_time  # Рассчитываем время с учетом паузы
             command = [
-                'ffplay', '-nodisp', '-autoexit', '-af', f'atempo={self.playback_speed}',
-                '-ss', str(elapsed_time), '-volume', str(self.volume_normal),  # Set volume level
+                'ffplay', '-nodisp', '-autoexit',
+                '-af', f'atempo={self.playback_speed}',  # Устанавливаем текущий темп
+                '-ss', str(elapsed_time), '-volume', str(self.volume_normal),  # Устанавливаем громкость
                 self.current_file
             ]
             self.current_process = subprocess.Popen(command, stdin=subprocess.PIPE)
@@ -146,14 +149,14 @@ class AudioPlayer(wx.Frame):
     def on_speed_up(self, event):
         self.playback_speed = min(self.playback_speed + 0.1, 2.0)  # Увеличиваем скорость, но не более чем до 2.0
         if self.current_process:
-            self.on_stop(None)
-            self.on_play(None)
+            self.on_pause(None)
+            self.on_resume(None)
 
     def on_slow_down(self, event):
         self.playback_speed = max(self.playback_speed - 0.1, 0.5)  # Уменьшаем скорость, но не менее чем до 0.5
         if self.current_process:
-            self.on_stop(None)
-            self.on_play(None)
+            self.on_pause(None)
+            self.on_resume(None)
 
     def on_rewind(self, event=None, sec=-2):
         if self.current_process:
@@ -229,6 +232,8 @@ class AudioPlayer(wx.Frame):
             self.forward_button.Show()
             self.prev_track_button.Show()
             self.next_track_button.Show()
+            self.volume_down_button.Show()
+            self.volume_up_button.Show()
 
     def on_space_key(self):
         """Handle the space key press."""
