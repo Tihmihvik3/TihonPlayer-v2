@@ -16,6 +16,7 @@ class AudioPlayer(wx.Frame):
         self.init_ui()
         self.current_process = None
         self.playback_speed = 1.0
+        self.pitch_factor = 1.0
         self.current_file = None
 
         self.start_time = 0
@@ -50,17 +51,10 @@ class AudioPlayer(wx.Frame):
         self.next_track_button = self.create_button(panel, 'Следующий трек (Page Down)', 'icons/next_track.png', (215, 500), self.on_next_track)
         self.volume_down_button = self.create_button(panel, 'Тише (Ctrl+Down)', 'icons/volume_down.png', (250, 500), self.on_volume_down)
         self.volume_up_button = self.create_button(panel, 'Громче (Ctrl+Up)', 'icons/volume_up.png', (285, 500), self.on_volume_up)
-
-        self.slow_down_button = wx.Button(panel, label='Замедлить')
-        self.speed_up_button = wx.Button(panel, label='Ускорить')
-
-
-        self.slow_down_button.SetPosition((180, 500))
-        self.speed_up_button.SetPosition((215, 500))
-
-
-        self.slow_down_button.Hide()
-        self.speed_up_button.Hide()
+        self.slow_down_button = self.create_button(panel, 'Медленнее (Shift+Left)', 'icons/slow_down.png', (320, 500), self.on_slow_down)
+        self.speed_up_button = self.create_button(panel, 'Быстрее (Shift+Right)', 'icons/speed_up.png', (355, 500), self.on_speed_up)
+        self.pitch_down_button = self.create_button(panel, 'Ниже (Shift+Down)', 'icons/pitch_down.png', (390, 500), self.on_pitch_down)
+        self.pitch_up_button = self.create_button(panel, 'Выше (Shift+Up)', 'icons/pitch_up.png', (425, 500), self.on_pitch_up)
 
         panel.SetSizer(vbox)
 
@@ -92,7 +86,8 @@ class AudioPlayer(wx.Frame):
             self.current_file = os.path.join(self.folder_path, file_name)
             command = [
                 'ffplay', '-nodisp', '-autoexit',
-                '-af', f'atempo={self.playback_speed}',
+                '-af',
+                f'asetrate=44100*{self.pitch_factor},atempo={self.playback_speed}',
                 '-volume', str(self.volume_normal),  # Устанавливаем громкость
                 self.current_file
             ]
@@ -116,7 +111,9 @@ class AudioPlayer(wx.Frame):
             elapsed_time = self.pause_time - self.start_time  # Рассчитываем время с учетом паузы
             command = [
                 'ffplay', '-nodisp', '-autoexit',
-                '-af', f'atempo={self.playback_speed}',  # Устанавливаем текущий темп
+                '-af',
+                f'asetrate=44100*{self.pitch_factor},atempo={self.playback_speed}',
+                # Устанавливаем текущий темп и тональность
                 '-ss', str(elapsed_time), '-volume', str(self.volume_normal),  # Устанавливаем громкость
                 self.current_file
             ]
@@ -171,8 +168,12 @@ class AudioPlayer(wx.Frame):
             # Start playback from the new position
             if self.current_file:
                 command = [
-                    'ffplay', '-nodisp', '-autoexit', '-af', f'atempo={self.playback_speed}',
-                    '-ss', str(elapsed_time), self.current_file
+                    'ffplay', '-nodisp', '-autoexit',
+                    '-af',
+                    f'asetrate=44100*{self.pitch_factor},atempo={self.playback_speed}',
+                    # Устанавливаем текущий темп и тональность
+                    '-ss', str(elapsed_time), '-volume', str(self.volume_normal),  # Устанавливаем громкость
+                    self.current_file
                 ]
                 self.current_process = subprocess.Popen(command, stdin=subprocess.PIPE)
                 self.start_time = time.time() - elapsed_time  # Update the start time
@@ -207,6 +208,20 @@ class AudioPlayer(wx.Frame):
             self.volume_normal = max(self.volume_normal - 5, 0)  # Decrease volume by 5, minimum 0
             self.on_resume(None)  # Resume playback
 
+    def on_pitch_down(self, event=None):
+        """Уменьшение тона воспроизведения."""
+        if self.current_process:
+            self.on_pause(None)  # Приостановить воспроизведение
+            self.pitch_factor = max(self.pitch_factor - 0.1, 0.5)  # Уменьшить тон, минимум 0.5
+            self.on_resume(None)  # Возобновить воспроизведение
+
+    def on_pitch_up(self, event=None):
+        """Increase the pitch of playback."""
+        if self.current_process:
+            self.on_pause(None)  # Pause playback
+            self.pitch_factor = min(self.pitch_factor + 0.1, 2.0)  # Increase pitch, maximum 2.0
+            self.on_resume(None)  # Resume playback
+
     def OnListboxUpdate(self, event):
         self.update_button_states()
 
@@ -234,6 +249,10 @@ class AudioPlayer(wx.Frame):
             self.next_track_button.Show()
             self.volume_down_button.Show()
             self.volume_up_button.Show()
+            self.pitch_down_button.Show()
+            self.pitch_up_button.Show()
+            self.slow_down_button.Show()
+            self.speed_up_button.Show
 
     def on_space_key(self):
         """Handle the space key press."""
