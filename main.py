@@ -4,6 +4,7 @@ import subprocess
 import time
 from hotkeys import HotkeysManager
 from wx import Bitmap, Image
+import threading
 
 
 class AudioPlayer(wx.Frame):
@@ -18,6 +19,8 @@ class AudioPlayer(wx.Frame):
         self.playback_speed = 1.0
         self.pitch_factor = 1.0
         self.current_file = None
+        self.repeat_track = False
+        self.repeat_list = False
 
         self.start_time = 0
         self.pause_time = 0
@@ -76,7 +79,7 @@ class AudioPlayer(wx.Frame):
         return button
 
     def on_play(self, event):
-        # Остановить текущее воспроизведение, если оно запущено
+        # Stop current playback if it's running
         if self.current_process:
             self.on_stop(None)
 
@@ -88,7 +91,7 @@ class AudioPlayer(wx.Frame):
                 'ffplay', '-nodisp', '-autoexit',
                 '-af',
                 f'asetrate=44100*{self.pitch_factor},atempo={self.playback_speed}',
-                '-volume', str(self.volume_normal),  # Устанавливаем громкость
+                '-volume', str(self.volume_normal),  # Set volume
                 self.current_file
             ]
             self.current_process = subprocess.Popen(command, stdin=subprocess.PIPE)
@@ -97,18 +100,30 @@ class AudioPlayer(wx.Frame):
             self.update_button_states()
             self.start_time = time.time()
 
+            # Start a thread to monitor playback completion
+            threading.Thread(target=self.monitor_playback, daemon=True).start()
+
+    def monitor_playback(self):
+        """Monitor the playback process and update button states when it finishes."""
+        if self.current_process:
+            self.current_process.wait()  # Подождите, пока процесс закончится
+            self.current_process = None
+            self.is_play = False
+
+            wx.CallAfter(self.update_button_states)  # Update button states in the main thread
+
     def on_pause(self, event):
         if self.current_process and not self.is_paused:
             self.pause_time = time.time()
-            self.current_process.stdin.write(b'p')  # Отправляем команду на паузу
+
             self.on_stop(None)
             self.is_play = False
             self.is_paused = True
             self.update_button_states()
 
-    def on_resume(self, event):
+    def on_resume(self, event, sek=0):
         if self.current_file and self.is_paused:
-            elapsed_time = self.pause_time - self.start_time  # Рассчитываем время с учетом паузы
+            elapsed_time = max(0, self.pause_time - self.start_time + sek)
             command = [
                 'ffplay', '-nodisp', '-autoexit',
                 '-af',
@@ -121,6 +136,7 @@ class AudioPlayer(wx.Frame):
             self.is_play = True
             self.is_paused = False
             self.update_button_states()
+            threading.Thread(target=self.monitor_playback, daemon=True).start()
 
     def on_stop(self, event):
         if self.current_process:
@@ -157,27 +173,9 @@ class AudioPlayer(wx.Frame):
 
     def on_rewind(self, event=None, sec=-2):
         if self.current_process:
-            # Save the stop time
-            self.pause_time = time.time()
-            elapsed_time = max(0, self.pause_time - self.start_time + sec)  # Subtract 2 seconds, minimum value is 0
+            self.on_pause(None)
+            self.on_resume(None, sec)
 
-            # Stop the current playback
-            self.current_process.terminate()
-            self.current_process = None
-
-            # Start playback from the new position
-            if self.current_file:
-                command = [
-                    'ffplay', '-nodisp', '-autoexit',
-                    '-af',
-                    f'asetrate=44100*{self.pitch_factor},atempo={self.playback_speed}',
-                    # Устанавливаем текущий темп и тональность
-                    '-ss', str(elapsed_time), '-volume', str(self.volume_normal),  # Устанавливаем громкость
-                    self.current_file
-                ]
-                self.current_process = subprocess.Popen(command, stdin=subprocess.PIPE)
-                self.start_time = time.time() - elapsed_time  # Update the start time
-                self.is_paused = False
 
     def on_forward(self, event, sec=2):
         self.on_rewind(None, sec)
