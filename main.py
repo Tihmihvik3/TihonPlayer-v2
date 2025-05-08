@@ -14,16 +14,18 @@ class AudioPlayer(wx.Frame):
 
         self.is_paused = False
         self.is_play = False
+        self.is_stop = False
         self.init_ui()
         self.current_process = None
         self.playback_speed = 1.0
         self.pitch_factor = 1.0
         self.current_file = None
-        self.repeat_track = False
+        self.repeat_track = True
         self.repeat_list = False
 
         self.start_time = 0
         self.pause_time = 0
+        self.playback_thread_started = False  # Флаг для отслеживания состояния потока
         self.folder_path = None  # Initialize folder_path
         self.volume_normal =70
 
@@ -96,12 +98,15 @@ class AudioPlayer(wx.Frame):
             ]
             self.current_process = subprocess.Popen(command, stdin=subprocess.PIPE)
             self.is_paused = False
+            self.is_stop = False
             self.is_play = True
             self.update_button_states()
             self.start_time = time.time()
 
             # Start a thread to monitor playback completion
-            threading.Thread(target=self.monitor_playback, daemon=True).start()
+            if not self.playback_thread_started:
+                threading.Thread(target=self.monitor_playback, daemon=True).start()
+                self.playback_thread_started = True
 
     def monitor_playback(self):
         """Monitor the playback process and update button states when it finishes."""
@@ -110,7 +115,10 @@ class AudioPlayer(wx.Frame):
             self.current_process = None
             self.is_play = False
 
-            wx.CallAfter(self.update_button_states)  # Update button states in the main thread
+            wx.CallAfter(self.update_button_states)
+            self.playback_thread_started = False
+            if self.repeat_track and not self.is_paused and not self.is_stop:
+                self.on_play(None)
 
     def on_pause(self, event):
         if self.current_process and not self.is_paused:
@@ -123,7 +131,8 @@ class AudioPlayer(wx.Frame):
 
     def on_resume(self, event, sek=0):
         if self.current_file and self.is_paused:
-            elapsed_time = max(0, self.pause_time - self.start_time + sek)
+            elapsed_time = self.pause_time - self.start_time + sek
+            print(sek)
             command = [
                 'ffplay', '-nodisp', '-autoexit',
                 '-af',
@@ -134,16 +143,20 @@ class AudioPlayer(wx.Frame):
             ]
             self.current_process = subprocess.Popen(command, stdin=subprocess.PIPE)
             self.is_play = True
+            self.is_stop = False
             self.is_paused = False
             self.update_button_states()
-            threading.Thread(target=self.monitor_playback, daemon=True).start()
+            if not self.playback_thread_started:
+                threading.Thread(target=self.monitor_playback, daemon=True).start()
+                self.playback_thread_started = True
 
     def on_stop(self, event):
         if self.current_process:
-            self.current_process.terminate()
+            self.current_process.terminate()  # Завершаем процесс
             self.current_process = None
             self.is_play = False
             self.is_paused = False
+            self.is_stop = True
             self.update_button_states()
 
     def on_browse(self, event):
