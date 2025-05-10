@@ -1,44 +1,67 @@
-from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout
-from PyQt6.QtGui import QIcon
-import sys
+import wx
 
-# Создаём приложение
-app = QApplication(sys.argv)
+class MyFrame(wx.Frame):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-# Создаём главное окно
-window = QWidget()
-window.setWindowTitle("Пример с кнопками")
+        # Создаем панель
+        self.panel = wx.Panel(self)
 
-# Создаём компоновщик
-layout = QVBoxLayout()
+        # Создаем вертикальный BoxSizer
+        self.vbox = wx.BoxSizer(wx.VERTICAL)
 
-# Создаём кнопки
-button1 = QPushButton()
-button2 = QPushButton("Кнопка 2")
-button3 = QPushButton("Кнопка 3")
+        # Добавляем кнопку в вертикальный BoxSizer
+        self.button1 = wx.Button(self.panel, label="Кнопка 1")
+        self.vbox.Add(self.button1, flag=wx.ALL | wx.CENTER, border=10)
 
-# Устанавливаем иконки для кнопок
-button1.setIcon(QIcon("icons/stop.png"))
-button2.setIcon(QIcon("icons/play.png"))
+        # Создаем горизонтальный BoxSizer
+        self.hbox = wx.BoxSizer(wx.HORIZONTAL)
 
-# Устанавливаем размер кнопок
-button1.setFixedSize(30, 30)
-button2.setFixedSize(30, 30)
+        # Добавляем три кнопки в горизонтальный BoxSizer
+        self.button2 = wx.Button(self.panel, label="Кнопка 2")
+        icon_path = "icons/play.png"  # Путь к иконке
+        self.button2.SetBitmap(wx.Bitmap(icon_path))  # Устанавливаем иконку на кнопку
+        self.button3 = wx.Button(self.panel, label="Кнопка 3")
+        self.button4 = wx.Button(self.panel, label="Кнопка 4")
 
-# Растягиваем иконку на всю кнопку
-button1.setIconSiz
-e(button1.size())
+        # Скрываем кнопки 2, 3 и 4
 
-# Добавляем кнопки в компоновщик
-layout.addWidget(button1)
-layout.addWidget(button2)
-layout.addWidget(button3)
+        self.button2.Hide()
+        self.button3.Hide()
+        self.button4.Hide()
 
-# Устанавливаем компоновщик для окна
-window.setLayout(layout)
 
-# Показываем окно
-window.show()
+        self.hbox.Add(self.button2, flag=wx.ALL, border=5)
+        self.hbox.Add(self.button3, flag=wx.ALL, border=5)
+        self.hbox.Add(self.button4, flag=wx.ALL, border=5)
 
-# Запускаем цикл событий
-app.exec()
+        # Добавляем горизонтальный BoxSizer в вертикальный BoxSizer
+        self.vbox.Add(self.hbox, flag=wx.ALL | wx.CENTER, border=10)
+
+        # Устанавливаем основной sizer для панели
+        self.panel.SetSizer(self.vbox)
+
+        # Устанавливаем размер окна
+        self.SetSize((300, 200))
+        self.SetTitle("Пример wxPython")
+        self.Centre()
+
+        # Привязываем обработчик события к кнопке 1
+        self.button1.Bind(wx.EVT_BUTTON, self.on_button1_click)
+
+    def on_button1_click(self, event):
+        # Отображаем кнопку 2 в hbox
+        self.button2.Show()
+        self.button3.Show()
+        self.panel.Layout()  # Обновляем макет для отображения изменений
+        # self.panel.Refresh()
+
+class MyApp(wx.App):
+    def OnInit(self):
+        frame = MyFrame(None)
+        frame.Show()
+        return True
+
+if __name__ == "__main__":
+    app = MyApp()
+    app.MainLoop()
