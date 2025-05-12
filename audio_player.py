@@ -1,4 +1,6 @@
 import os
+
+import keyboard
 import wx
 import subprocess
 import time
@@ -13,6 +15,7 @@ class AudioPlayer(wx.Frame):
         super(AudioPlayer, self).__init__(*args, **kw)
         self.SetSize(wx.Size(600, 600))
 
+        self.num = 0
         self.is_paused = False
         self.is_play = False
         self.is_stop = False
@@ -22,14 +25,19 @@ class AudioPlayer(wx.Frame):
         self.pitch_factor = 1.0
         self.current_file = None
         self.buttons_data = None
-        self.repeat_track = True
-        self.repeat_list = False
+        self.repeat_track = False
+        self.repeat_list = True
+        self.play_list = True
 
         self.start_time = 0
         self.pause_time = 0
         self.playback_thread_started = False  # Флаг для отслеживания состояния потока
+        self.daemonthread = threading.Thread(target=self.monitor_playback)
+        self.blocking_keyboard = False
+        self.blocking_keyboard_thread = threading.Thread(target=self.time_blocking_keyboard)
+        # self.blocking_keyboard_thread.start()
         self.folder_path = None  # Initialize folder_path
-        self.volume_normal =70
+        self.volume_normal = 70
 
         self.hotkeys_manager = HotkeysManager(self)
         self.hotkeys_manager.register_hotkeys()
@@ -43,6 +51,7 @@ class AudioPlayer(wx.Frame):
         self.update_button_states = self.ui_manager.update_button_states
 
     def on_play(self, event):
+        self.blocking_keyboard = True
         # Stop current playback if it's running
         if self.current_process:
             self.on_stop(None)
@@ -59,6 +68,7 @@ class AudioPlayer(wx.Frame):
                 self.current_file
             ]
             self.current_process = subprocess.Popen(command, stdin=subprocess.PIPE)
+
             self.is_paused = False
             self.is_stop = False
             self.is_play = True
@@ -67,20 +77,35 @@ class AudioPlayer(wx.Frame):
 
             # Start a thread to monitor playback completion
             if not self.playback_thread_started:
-                threading.Thread(target=self.monitor_playback, daemon=True).start()
+                self.daemonthread.start()
                 self.playback_thread_started = True
 
     def monitor_playback(self):
         """Monitor the playback process and update button states when it finishes."""
-        if self.current_process:
-            self.current_process.wait()  # Подождите, пока процесс закончится
-            self.current_process = None
-            self.is_play = False
+        while True:
+            time.sleep(1)
+            if self.current_process:
 
-            self.update_button_states(self.is_play, self.is_paused)
-            self.playback_thread_started = False
-            if self.repeat_track and not self.is_paused and not self.is_stop:
-                self.on_play(None)
+                self.current_process.wait()  # Подождите, пока процесс закончится
+                self.current_process = None
+                self.is_play = False
+
+                self.update_button_states(self.is_play, self.is_paused)
+
+                if self.repeat_track and not self.is_paused and not self.is_stop:
+                    self.on_play(None)
+                if self.play_list and not self.is_paused and not self.is_stop:
+                    self.on_next_track(None)
+
+    def time_blocking_keyboard(self):
+        while True:
+            time.sleep(1)
+            print('Blocking keyboard')
+            if self.blocking_keyboard:
+                # keyboard.block_key('all')
+                time.sleep(5)
+                # keyboard.unblock_key('all')
+                self.blocking_keyboard = False
 
     def on_pause(self, event):
         if self.current_process and not self.is_paused:
@@ -108,14 +133,12 @@ class AudioPlayer(wx.Frame):
             self.is_stop = False
             self.is_paused = False
             self.update_button_states(self.is_play, self.is_paused)
-            if not self.playback_thread_started:
-                threading.Thread(target=self.monitor_playback, daemon=True).start()
-                self.playback_thread_started = True
 
     def on_stop(self, event):
         if self.current_process:
             self.current_process.terminate()  # Завершаем процесс
             self.current_process = None
+
             self.is_play = False
             self.is_paused = False
             self.is_stop = True
@@ -151,7 +174,6 @@ class AudioPlayer(wx.Frame):
             self.on_pause(None)
             self.on_resume(None, sec)
 
-
     def on_forward(self, event, sec=2):
         self.on_rewind(None, sec)
 
@@ -167,6 +189,9 @@ class AudioPlayer(wx.Frame):
         selection = self.listbox.GetSelection()
         if selection != wx.NOT_FOUND and selection < self.listbox.GetCount() - 1:
             self.listbox.SetSelection(selection + 1)
+            self.on_play(None)
+        if selection != wx.NOT_FOUND and selection == self.listbox.GetCount() - 1 and self.repeat_list:
+            self.listbox.SetSelection(0)
             self.on_play(None)
 
     def on_volume_up(self, event):
@@ -214,11 +239,11 @@ class AudioPlayer(wx.Frame):
             return
         if event.ControlDown() and key_code in [wx.WXK_UP, wx.WXK_DOWN]:
             return  # Prevent Control+Up and Control+Down from affecting the listbox
+        if event.ShiftDown() and key_code in [wx.WXK_UP, wx.WXK_DOWN]:
+            return
         event.Skip()  # Allow other keys to be processed normally
-
 
     def on_close(self, event):
         if self.current_process:
             self.current_process.terminate()
         self.Destroy()
-
