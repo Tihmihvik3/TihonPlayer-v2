@@ -1,5 +1,5 @@
 import os
-
+from config import Config
 import keyboard
 import wx
 import subprocess
@@ -8,6 +8,7 @@ from hotkeys import HotkeysManager
 from init_ui import UIManager
 from wx import Bitmap, Image
 import threading
+from settings import SettingsDialog
 
 
 class AudioPlayer(wx.Frame):
@@ -25,9 +26,11 @@ class AudioPlayer(wx.Frame):
         self.pitch_factor = 1.0
         self.current_file = None
         self.buttons_data = None
-        self.repeat_track = False
-        self.repeat_list = True
-        self.play_list = True
+
+        self.config = Config()
+        self.repeat_track = self.config.get('REPEAT_MUSIC', 'repeat_track') == 'True'
+        self.repeat_list = self.config.get('REPEAT_MUSIC', 'repeat_list') == 'True'
+        self.play_list = self.config.get('REPEAT_MUSIC', 'all_list') == 'True'
 
         self.start_time = 0
         self.pause_time = 0
@@ -242,6 +245,12 @@ class AudioPlayer(wx.Frame):
         if event.ShiftDown() and key_code in [wx.WXK_UP, wx.WXK_DOWN]:
             return
         event.Skip()  # Allow other keys to be processed normally
+
+    def on_settings(self, event):
+
+        settings_dialog = SettingsDialog(self)
+        settings_dialog.ShowModal()
+        settings_dialog.Destroy()
 
     def on_close(self, event):
         if self.current_process:

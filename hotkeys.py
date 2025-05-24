@@ -32,7 +32,6 @@ class HotkeysManager:
         keyboard.add_hotkey('alt+right', lambda: wx.CallAfter(self.execute_if_active, self.tab.on_forward, None, 30))
         keyboard.add_hotkey('left', lambda: wx.CallAfter(self.execute_if_active, self.tab.on_rewind, None))
         keyboard.add_hotkey('right', lambda: wx.CallAfter(self.execute_if_active, self.tab.on_forward, None))
-        keyboard.add_hotkey('esc', lambda: wx.CallAfter(self.execute_if_active, self.tab.on_mute, None))
         keyboard.add_hotkey('ctrl+up', lambda: wx.CallAfter(self.execute_if_active, self.tab.on_volume_up, None))
         keyboard.add_hotkey('ctrl+down', lambda: wx.CallAfter(self.execute_if_active, self.tab.on_volume_down, None))
         keyboard.add_hotkey('ctrl+p', lambda: wx.CallAfter(self.execute_if_active, self.tab.on_settings, None))

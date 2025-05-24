@@ -12,7 +12,8 @@ class UIManager:
         self.listbox = wx.ListBox(self.panel)
         self.listbox.SetMaxSize((-1, 470))
         vbox.Add(self.listbox, proportion=1, flag=wx.EXPAND | wx.ALL, border=10)
-        self.hbox = wx.BoxSizer(wx.HORIZONTAL)
+        self.hbox = wx.WrapSizer(wx.HORIZONTAL)
+
 
         self.buttons_data = [
             ('Воспроизведение (Space)', 'icons/play.png', parent.on_play),
@@ -30,6 +31,7 @@ class UIManager:
             ('Ниже (Shift+Down)', 'icons/pitch_down.png', parent.on_pitch_down),
             ('Выше (Shift+Up)', 'icons/pitch_up.png', parent.on_pitch_up),
             ('Обзор (Ctrl+B)', 'icons/browse.png', parent.on_browse),
+            ('Настройки (Ctrl+P)', 'icons/settings.png', parent.on_settings),
         ]
 
         for label, icon, handler in self.buttons_data:
@@ -47,8 +49,9 @@ class UIManager:
         parent.Centre()
 
     def create_button(self, panel, label, bitmap_path, event_handler):
-        button = wx.Button(panel, label=label)
+
         button = wx.BitmapButton(panel, bitmap=wx.Bitmap(bitmap_path))
+        button.SetLabel(label)
         self.parent.Bind(wx.EVT_BUTTON, event_handler, button)
         button.Hide()
         return button
@@ -56,7 +59,7 @@ class UIManager:
     def update_button_states(self, play=False, pause=False):
         is_listbox_empty = self.listbox.GetCount() == 0
         if not is_listbox_empty:
-            for i in range(3, 15):
+            for i in range(3, 16):
                 button = self.hbox.GetChildren()[i].GetWindow()
                 button.Show()
             button_play = self.hbox.GetChildren()[0].GetWindow()
