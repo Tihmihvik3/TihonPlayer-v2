@@ -14,7 +14,7 @@ from settings import SettingsDialog
 class AudioPlayer(wx.Frame):
     def __init__(self, *args, **kw):
         super(AudioPlayer, self).__init__(*args, **kw)
-        self.SetSize(wx.Size(600, 600))
+        self.SetSize(wx.Size(600, 630))
 
         self.num = 0
         self.is_paused = False
@@ -31,10 +31,12 @@ class AudioPlayer(wx.Frame):
         self.repeat_track = self.config.get('REPEAT_MUSIC', 'repeat_track') == 'True'
         self.repeat_list = self.config.get('REPEAT_MUSIC', 'repeat_list') == 'True'
         self.play_list = self.config.get('REPEAT_MUSIC', 'all_list') == 'True'
+        self.default_folder = self.config.get('FOLDER_PATH', 'folder_path1')
 
         self.start_time = 0
         self.pause_time = 0
         self.playback_thread_started = False  # Флаг для отслеживания состояния потока
+        self.stop_threads = False  # Flag to stop threads
         self.daemonthread = threading.Thread(target=self.monitor_playback)
         self.blocking_keyboard = False
         self.blocking_keyboard_thread = threading.Thread(target=self.time_blocking_keyboard)
@@ -85,11 +87,10 @@ class AudioPlayer(wx.Frame):
 
     def monitor_playback(self):
         """Monitor the playback process and update button states when it finishes."""
-        while True:
+        while not self.stop_threads:  # Check the stop_threads flag
             time.sleep(1)
             if self.current_process:
-
-                self.current_process.wait()  # Подождите, пока процесс закончится
+                self.current_process.wait()  # Wait for the process to finish
                 self.current_process = None
                 self.is_play = False
 
@@ -148,7 +149,8 @@ class AudioPlayer(wx.Frame):
             self.update_button_states(self.is_play, self.is_paused)
 
     def on_browse(self, event):
-        with wx.DirDialog(self, "Выберите папку с аудиофайлами", style=wx.DD_DEFAULT_STYLE) as dlg:
+        with wx.DirDialog(self, "Выберите папку с аудиофайлами", defaultPath=self.default_folder,
+                          style=wx.DD_DEFAULT_STYLE) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 self.folder_path = dlg.GetPath()  # Set folder_path here
                 self.listbox.Clear()
@@ -253,6 +255,7 @@ class AudioPlayer(wx.Frame):
         settings_dialog.Destroy()
 
     def on_close(self, event):
+        self.stop_threads = True  # Signal threads to stop
         if self.current_process:
             self.current_process.terminate()
         self.Destroy()
